@@ -358,8 +358,19 @@
             </div>
             
             <div class="output-panel" style="border-top: 1px solid var(--border);">
-                <div class="panel-label">Phases Output</div>
-                <div id="phases-output" class="console"></div>
+                <div class="panel-label" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 15px;">
+                    <span style="font-size: 0.7rem; padding: 3px 0;">Phases Output</span>
+                    <div style="display: flex; gap: 2px;">
+                        <button class="phase-btn active" data-phase="all" style="padding: 2px 6px; font-size: 0.65rem; background: #6272a4; border-radius: 2px;">All</button>
+                        <button class="phase-btn" data-phase="p1" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">Lexer</button>
+                        <button class="phase-btn" data-phase="p2" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">Parser</button>
+                        <button class="phase-btn" data-phase="p3" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">Semantic</button>
+                        <button class="phase-btn" data-phase="p4" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">Opt</button>
+                        <button class="phase-btn" data-phase="p5" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">TAC</button>
+                        <button class="phase-btn" data-phase="p6" style="padding: 2px 6px; font-size: 0.65rem; background: #44475a; border-radius: 2px;">Codegen</button>
+                    </div>
+                </div>
+                <div id="phases-output" class="console">Run code to see phases...</div>
             </div>
             
             <div class="side-tabs">
@@ -522,6 +533,36 @@ end`
             };
         });
 
+        // Phase Output Tabs
+        let lastPhasesData = {};
+        let lastPhasesAll = "";
+        
+        document.querySelectorAll('.phase-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.phase-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = '#44475a';
+                });
+                btn.classList.add('active');
+                btn.style.background = '#6272a4';
+                
+                const phase = btn.dataset.phase;
+                const outDiv = document.getElementById("phases-output");
+                outDiv.innerHTML = "";
+                const span = document.createElement('span');
+                span.className = 'output-text';
+                
+                if (phase === 'all') {
+                    span.textContent = lastPhasesAll;
+                } else if (lastPhasesData[phase]) {
+                    span.textContent = lastPhasesData[phase];
+                } else {
+                    span.textContent = "No data for this phase.";
+                }
+                outDiv.appendChild(span);
+            };
+        });
+
         // Examples
         document.getElementById('example-select').onchange = (e) => {
             if (e.target.value === 'custom') {
@@ -667,8 +708,17 @@ end`
                 }
                 
                 if (data.phases_output) {
-                    document.getElementById("phases-output").innerHTML = `<span class="output-text">${data.phases_output}</span>`;
+                    lastPhasesAll = data.phases_output;
+                    lastPhasesData = data.phases_dict || {};
+                    
+                    // Trigger the currently active phase tab to render the content
+                    const activePhaseBtn = document.querySelector('.phase-btn.active');
+                    if (activePhaseBtn) {
+                        activePhaseBtn.click();
+                    }
                 } else {
+                    lastPhasesAll = "";
+                    lastPhasesData = {};
                     document.getElementById("phases-output").innerHTML = "";
                 }
                 

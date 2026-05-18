@@ -10,6 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from compiler.lexer import Lexer
 from compiler.parser import Parser
 from compiler.semantic import SemanticAnalyzer
+from compiler.optimizer import ASTOptimizer
+from compiler.ir_generator import IRGenerator
 from compiler.codegen import CodeGenerator
 from runtime.executor import Executor
 from compiler.errors import PlainscriptError
@@ -84,22 +86,53 @@ def run():
         analyzer = SemanticAnalyzer()
         analyzer.analyze(ast)
         semantic_out = "Semantic analysis completed successfully.\nGlobal scope symbols defined: " + str(list(analyzer.global_scope.symbols.keys()))
-        
-        phases_output = f"=== PHASE 1: LEXICAL ANALYSIS (Lexer) ===\n{tokens_out}\n\n=== PHASE 2: SYNTAX ANALYSIS (LL1 Parser) ===\n{ast_out}\n\n=== PHASE 3: SEMANTIC ANALYSIS ===\n{semantic_out}"
-        
-        # Phase 4: Code Generation & Execution
+
+        # Phase 4: Optimization (AST-Level)
+        optimizer = ASTOptimizer()
+        ast = optimizer.optimize(ast)
+        optimization_report = optimizer.report.to_list()
+        optimization_summary = optimizer.report.summary()
+
+        # Phase 5: Intermediate Code Generation (TAC)
+        ir_gen = IRGenerator()
+        ir_gen.generate(ast)
+        tac_code = ir_gen.get_code()
+
+        # Phase 6: Code Generation & Execution
         generator = CodeGenerator()
         python_code = generator.generate(ast)
+
+        phases_output = (
+            f"=== PHASE 1: LEXICAL ANALYSIS (Lexer) ===\n{tokens_out}\n\n"
+            f"=== PHASE 2: SYNTAX ANALYSIS (Recursive Descent Parser) ===\n{ast_out}\n\n"
+            f"=== PHASE 3: SEMANTIC ANALYSIS ===\n{semantic_out}\n\n"
+            f"=== PHASE 4: OPTIMIZATION (AST-Level) ===\n{optimization_summary}\n\n"
+            f"=== PHASE 5: INTERMEDIATE CODE GENERATION (TAC) ===\n{tac_code}\n\n"
+            f"=== PHASE 6: CODE GENERATION ===\n{python_code}"
+        )
         
+        phases_dict = {
+            "p1": tokens_out,
+            "p2": ast_out,
+            "p3": semantic_out,
+            "p4": optimization_summary,
+            "p5": tac_code,
+            "p6": python_code
+        }
+
         executor = Executor()
         result = executor.run(python_code, inputs=inputs)
         
         return jsonify({
             "output": result["output"],
             "phases_output": phases_output,
+            "phases_dict": phases_dict,
             "error": result["error"],
             "generated_python": python_code,
-            "tokens": [t.to_dict() for t in tokens if t.type != 'TK_EOF']
+            "tokens": [t.to_dict() for t in tokens if t.type != 'TK_EOF'],
+            "optimization_report": optimization_report,
+            "optimization_summary": optimization_summary,
+            "tac_code": tac_code,
         })
         
     except PlainscriptError as e:

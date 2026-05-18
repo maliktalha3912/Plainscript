@@ -4,6 +4,8 @@ import os
 from compiler.lexer import Lexer
 from compiler.parser import Parser
 from compiler.semantic import SemanticAnalyzer
+from compiler.optimizer import ASTOptimizer
+from compiler.ir_generator import IRGenerator
 from compiler.codegen import CodeGenerator
 from runtime.executor import Executor
 from compiler.errors import PlainscriptError
@@ -34,14 +36,24 @@ def run_file(file_path):
         analyzer.analyze(ast)
         print("Semantic analysis completed successfully.")
         print("Global scope symbols defined:", list(analyzer.global_scope.symbols.keys()))
-        
-        print("\n=== PHASE 4: CODE GENERATION & EXECUTION ===")
+
+        print("\n=== PHASE 4: OPTIMIZATION (AST-Level) ===")
+        optimizer = ASTOptimizer()
+        ast = optimizer.optimize(ast)
+        print(optimizer.report.summary())
+
+        print("\n=== PHASE 5: INTERMEDIATE CODE GENERATION (TAC) ===")
+        ir_gen = IRGenerator()
+        ir_gen.generate(ast)
+        print(ir_gen.get_code())
+
+        print("\n=== PHASE 6: CODE GENERATION & EXECUTION ===")
         generator = CodeGenerator()
         python_code = generator.generate(ast)
-        
+
         executor = Executor()
         result = executor.run(python_code)
-        
+
         if result["error"]:
             print("\nExecution Error:\n" + result["error"])
         else:
