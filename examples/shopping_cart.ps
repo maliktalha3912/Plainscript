@@ -1,0 +1,21 @@
+// Shopping Cart
+set cart to []
+set prices to [100, 250, 75, 300]
+
+for each price in prices
+    add price to cart
+end
+
+set total to 0
+for each item in cart
+    set total to total plus item
+end
+
+show "Total: " joined with total
+
+if total is greater than 500 then
+    show "You get a discount!"
+    set total to total times 0.9
+end
+
+show "Final: " joined with total
